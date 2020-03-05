@@ -1,7 +1,10 @@
+# Requires python2
+
 # Read Barcodes and Organize Files
 
-from utils.macroscopeUtils4B import RenameAndCopyImageFile
-from utils.specutils9 import GenerateFileList
+
+from macroscopeUtils4B import RenameAndCopyImageFile
+from specutils9 import GenerateFileList
 
 
 systemBaseDir = "/media/psf/Dropbox for Business/"
