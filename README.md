@@ -11,4 +11,6 @@ Up until now, have only had luck running this on Windows
 ## What Does This Do?
 These two codes are really useful for organizing images of micro-well plates taken with a macroscope by the barcode printed onto them. 
 
-*OrganizeAssayPhotographsByBarcode.py* organizes pictures of micro-well plates taken from the top with the barcode label affixed to the top surface of the plate
+*OrganizeAssayPhotographsByBarcode.py* organizes pictures of optically clear micro-well plates taken from the top with the barcode label affixed to the top surface of the plate
+
+*OrganizeStoragePlatesByBarcode.py* organizes pictures of micro-well 
