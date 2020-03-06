@@ -4,9 +4,9 @@ Buz Barstow
 Created sometime in 2015
 
 ## Requirements
-Python 2
-SimpleCV/OpenCV (not entirely sure which one)
-Up until now, have only had luck running this on Windows
+* Python 2
+* SimpleCV/OpenCV (not entirely sure which one)
+* Up until now, have only had luck running this on Linux. 
 
 ## What Does This Do?
 These two codes are really useful for organizing images of micro-well plates taken with a macroscope by the barcode printed onto them. 
