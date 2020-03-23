@@ -123,10 +123,10 @@ def ProcessFileNameExtension(fileName):
 
 # ------------------------------------------------------------------------------------------------ #
 def ensure_dir(f):
-    import os
-    d = os.path.dirname(f)
-    if not os.path.exists(d):
-        os.makedirs(d)
+	import os
+	d = os.path.dirname(f)
+	if not os.path.exists(d):
+		os.makedirs(d)
 
 
 def RenameAndCopyImageFile(destBaseDir, fileName, diagnostics=False, preflight=False, \
@@ -230,66 +230,35 @@ def GenerateCheckSum(text):
 # ------------------------------------------------------------------------------------------------ #
 
 
-
-
-
 # ------------------------------------------------------------------------------------------------ #
 def ProcessPlateBarcode(fileName):
-	from SimpleCV import Image
-	import pdb
-	
-	timeStamp = ProcessTimeStamp(fileName)
-	ProcessResults = ProcessFileNameExtension(fileName)
-	fileNameNoExt = ProcessResults[0]
-	fileExtension = ProcessResults[1]
-	
-# 	pdb.set_trace()
-	
-	img = Image(fileName)
-	
-	barcode = img.findBarcode()
-	
-	if barcode != None:
-		if len(barcode[0].data) >= 2:	
-			plateID = barcode[0].data[0:-1]
-			checkSum = barcode[0].data[-1]	
-			calculatedChecksum = GenerateCheckSum(plateID)
-	
-			if checkSum is not calculatedChecksum:
-				print("Error in barcode check sum. File: " + fileName)
-		else:
-			plateID = 'UNKNOWN'
-	else:
-		plateID = 'UNKNOWN'
-	
-	
-	return [plateID, timeStamp, fileExtension]
-		
-# ------------------------------------------------------------------------------------------------ #
-
-# ------------------------------------------------------------------------------------------------ #
-def ProcessPlateBarcodeTest(fileName):
 	import pyzbar.pyzbar as pyzbar
 	import numpy as np
 	import cv2
 
 	timeStamp = ProcessTimeStamp(fileName)
-	fileNameNoExt, fileExtension = ProcessFileNameExtension(fileName)
-    decodedObjects = pyzbar.decode(image)
-    
-	 if decodedObjects != None:
-        barcode = decodedObjects[0][0][:-1].decode("utf-8")
-        if len(barcode > 1):
-            plateID = barcode[:-1]
-            checkSum = barcode[-1]
-            calculatedChecksum = GenerateCheckSum(plateID)
-        
-            if checkSum != calculatedChecksum:
-                print("Error in barcode check sum. File: " + fileName)\
-        else:
-            plateID = 'UNKNOWN'
-    else:
-        plateID = 'UNKNOWN'
+	processed_result = ProcessFileNameExtension(fileName)
+	fileNameNoExt = processed_result[0]
+	fileExtension = processed_result[1]
+	image = cv2.imread(fileName)
+	decodedObjects = pyzbar.decode(image)
+	
+	if decodedObjects != None:
+		barcode = decodedObjects[0][0][:-1].decode("utf-8")
+		if len(barcode) > 1:
+			print(barcode)
+			plateID = barcode[:-1]
+			checkSum = barcode[-1]
+			print(plateID)
+			calculatedChecksum = GenerateCheckSum(plateID)
+		
+			if checkSum != calculatedChecksum:
+				print(checkSum, calculatedChecksum)
+				print("Error in barcode check sum. File: " + fileName)
+		else:
+			plateID = 'UNKNOWN'
+	else:
+		plateID = 'UNKNOWN'
 
 	return [plateID, timeStamp, fileExtension]
 
@@ -963,7 +932,7 @@ def FindBlobSelfVectors(fblobs):
 		selfVectors.append([])
 		
 		j = 0
-		while j < len(fblobs):
+Fwhile j < len(fblobs):
 			if i != j:
 				selfVectors[i].append(fblobs[j].coordinates()-fblobs[i].coordinates())
 			j += 1

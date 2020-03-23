@@ -7,7 +7,6 @@ from specutils9 import GenerateFileList
 from tkinter import filedialog
 import tkinter as tk
 
-#TODO - add capability to select files and not hardcode
 root = tk.Tk()
 root.withdraw()
 print("select source directory")
