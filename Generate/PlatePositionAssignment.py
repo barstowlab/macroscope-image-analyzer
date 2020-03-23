@@ -81,26 +81,20 @@ maxRows = 20
 maxColumns = 21
 maxPlates = 417
 
-# i = 1 #TODO remove
 platePositions = []
 plates = []
 
 for i in range(1, maxPlates+1):
-# while i <= maxPlates: `	#TODO  remove
 	platePositions.append(PlatePosition(i, maxRows, maxColumns))
 	plates.append(Plate(i))	
-	#i += 1 #TODO remove
 
 # platesShuffled = shuffleArray(plates)
 	#TODO why is this a thing
 platesShuffled = plates
 
-# i = 0 #TODO remove
 
 for i in range(len(platesShuffled)):
-# while i < len(platesShuffled): #TODO remove
 	platePositions[i].plate = platesShuffled[i]
-	# i += 1 #TODO remove
 
 
 for platePosition in platePositions:
