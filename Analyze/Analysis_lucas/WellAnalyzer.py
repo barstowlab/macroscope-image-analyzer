@@ -4,16 +4,29 @@ import tkinter as tk
 import analysis_functions
 import csv
 
+TK_SILENCE_DEPRECATION=1
+
+def create_notification(message):
+    notification = tk.Tk()
+    notification.title("Notification")
+    notification.geometry("400x50")
+
+    tk.Label(notification, text = message).pack()
+
+    tk.Button(notification, text = "Close", command = notification.destroy).pack()
+    notification.mainloop()
+
+
 
 # Generate Screen
 def open_generate():
     master.withdraw()
-    master.quit()
+    master.destroy()
     
     # Generate Variables
     generate = tk.Tk()
     generate.title("Generate Barcodes")
-    generate.geometry("500x600")
+    generate.geometry("500x650")
 
     plate_type = tk.StringVar(generate)
     output_file = tk.StringVar(generate)
@@ -25,12 +38,28 @@ def open_generate():
     padding_rows = tk.BooleanVar(generate)
     barcode_number_start = tk.IntVar(generate)
     barcode_number_end = tk.IntVar(generate)
+    dest_directory = tk.StringVar(generate)
 
     def run_generate():
         if output_file.get() == "":
-            print("Error: Must Have a Output File Name")
-        print(output_file.get())
-        return
+            create_notification("ERROR: Must have created an Output File Name")
+            return
+        if dest_directory.get() == "":
+            create_notification("ERROR: Must select a destination")
+            return
+        print("HELLO")
+        generate.destroy()
+        create_notification("Saved file to Local Directory")
+
+        print("MODDLE")
+        output_file_and_directory = dest_directory.get() + "/" + output_file.get()
+        print(output_file_and_directory)
+        print("GOODBYE")
+
+        analysis_functions.generate_barcode(plate_type.get(), output_file_and_directory, \
+            barcode_prefix.get(), barcode_postfix.get(), max_rows.get(), max_columns.get(), \
+                padding_columns.get(), padding_rows.get(), barcode_number_start.get(), \
+                    barcode_number_end.get()+1)
 
 
 
@@ -50,7 +79,7 @@ def open_generate():
     tk.Entry(generate, textvariable = barcode_postfix).pack()
 
     # Output File Name
-    tk.Label(generate, text = "Output File name:").pack()
+    tk.Label(generate, text = "Output File name (end with '.csv'):").pack()
     tk.Entry(generate, textvariable = output_file).pack()
 
     # Max Rows:
@@ -84,12 +113,17 @@ def open_generate():
     tk.Entry(generate, textvariable = barcode_number_end).pack()
 
 
+    # Save Location, destination directory
+    def select_dest_folder():
+        dest_directory.set(filedialog.askdirectory())
 
+    tk.Button(generate, text = "Select Destination", command = select_dest_folder).pack()
+    
     # Generate Barcodes - finished with inputs
     tk.Button(generate, text = "Generate Barcodes", command = run_generate).pack()
+    
+
     generate.mainloop()
-
-
 
 # Organize Screen
 
