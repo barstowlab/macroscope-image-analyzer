@@ -16,7 +16,7 @@ def create_notification(message):
     tk.Button(notification, text = "Close", command = notification.destroy).pack()
     notification.mainloop()
 
-
+###############################################
 
 # Generate Screen
 def open_generate():
@@ -47,19 +47,18 @@ def open_generate():
         if dest_directory.get() == "":
             create_notification("ERROR: Must select a destination")
             return
-        print("HELLO")
+
         generate.destroy()
+
         create_notification("Saved file to Local Directory")
 
-        print("MODDLE")
         output_file_and_directory = dest_directory.get() + "/" + output_file.get()
-        print(output_file_and_directory)
-        print("GOODBYE")
 
         analysis_functions.generate_barcode(plate_type.get(), output_file_and_directory, \
             barcode_prefix.get(), barcode_postfix.get(), max_rows.get(), max_columns.get(), \
                 padding_columns.get(), padding_rows.get(), barcode_number_start.get(), \
                     barcode_number_end.get()+1)
+        return
 
 
 
@@ -113,7 +112,10 @@ def open_generate():
     tk.Entry(generate, textvariable = barcode_number_end).pack()
 
 
+
+
     # Save Location, destination directory
+    tk.Label(generate, text = dest_directory.get()).pack()
     def select_dest_folder():
         dest_directory.set(filedialog.askdirectory())
 
@@ -125,7 +127,67 @@ def open_generate():
 
     generate.mainloop()
 
+###############################################
+
 # Organize Screen
+
+def open_organize():
+    master.withdraw()
+    master.destroy()
+    
+    # Generate Variables
+    organize = tk.Tk()
+    organize.title("Organize by Barcodes")
+    organize.geometry("500x300")
+    UNSET_DESTINATION = "Select Destination"
+
+    plate_type = tk.StringVar(organize)
+    source_directory = tk.StringVar(organize)
+    source_directory.set(UNSET_DESTINATION)
+    dest_directory = tk.StringVar(organize)
+    dest_directory.set(UNSET_DESTINATION)
+
+    def run_organize():
+        if source_directory.get() ==  "" or source_directory.get() == UNSET_DESTINATION:
+            create_notification("ERROR: Must designate a source directory")
+            return
+        if dest_directory.get() ==  "" or dest_directory.get() == UNSET_DESTINATION:
+            create_notification("ERROR: Must designate a destination directory")
+            return
+        analysis_functions.organize_by_barcode(plate_type.get(), source_directory.get(),\
+            dest_directory.get())
+        return
+
+
+    # Plate Type
+    tk.Label(organize, text = "Type of Plate:").pack()
+    plate_type.set("Assay")
+    tk.Radiobutton(organize, text = "Assay", variable = plate_type, value = "Assay").pack()
+    tk.Radiobutton(organize, text = "Storage", variable = plate_type, value = "Storage").pack()
+
+    # Destination Directory directory
+    dest_text = tk.Label(organize, textvariable = dest_directory)
+    dest_text.pack()
+    def select_dest_folder():
+        dest_directory.set(filedialog.askdirectory())
+
+    tk.Button(organize, text = "Select Destination", command = select_dest_folder).pack()
+
+    # Source directory
+    souce_text = tk.Label(organize , textvariable = source_directory)
+    souce_text.pack()
+    def select_source_folder():
+        source_directory.set(filedialog.askdirectory())
+
+    tk.Button(organize, text = "Select Source", command = select_source_folder).pack()
+
+    # Organize by Barcodes - finished with inputs
+    tk.Button(organize, text = "Organize by Barcodes", command = run_organize).pack()
+
+    
+     
+    organize.mainloop()
+
 
 
 # Analyze Screen
@@ -138,14 +200,9 @@ master = tk.Tk()
 master.title("Jurgensen Well Analyzer Demo")
 master.geometry("500x300")
 
-choice_label = tk.Label(master, text = "Select which function you want to perform")
-generate_button = tk.Button(master, text = "Generate Barcodes", command = open_generate)
-choice_label.pack()
-generate_button.pack()
-
-
-organize_button = tk.Button(master, text = "Organize Images by Barcodes")
-
-analyze_button = tk.Button(master, text = "Analyze Images")
+tk.Label(master, text = "Select which function you want to perform").pack()
+tk.Button(master, text = "Generate Barcodes", command = open_generate).pack()
+tk.Button(master, text = "Organize by Barcodes", command = open_organize).pack()
 
 master.mainloop()
+
