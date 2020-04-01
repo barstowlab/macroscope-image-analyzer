@@ -14,62 +14,77 @@ import tkinter as Tk
 
 # reads input file
 argv = sys.argv
-inputParameters = ["color_info_file"]
+inputParameters = ["color_info_file", "times", "save_location"]
 if len(argv) != 2:
     print("Error: IndexSummarize takes 1 argument, the input file name")
     sys.exit(-1)
 proj_name = sys.argv[1]
 file_intro = '../inputs/' + proj_name + '/'
-file_name = file_intro + 'PlotColorTimeSeries.inp'
+file_name = file_intro + 'PlotLollipopGraph.inp'
 inputParameterValues = get_input(file_name, inputParameters)
 
 color_info_file = inputParameterValues["color_info_file"]
+timesToGet = [float(i) for i in inputParameterValues["times"].split(',')]
+timesToGet.reverse()
+save_loc = inputParameterValues["save_location"]
 
 # creates dictionary of genes with time series of color values
 gene_series = import_gene_color_change_dict(color_info_file)
 all_genes = list(gene_series.keys())
-color_keys = ['mean_green', 'mean_red', 'mean_blue', 'median_green', 'median_red', 'median_blue', 'mean_yellow',
-              'median_yellow']
 
-selectedGeneNames = ['Q_WT', 'Blank']
+# generates GUI for plotting
+root = Tk.Tk()
 
-selectedGenesArray = []
+# creates gene plotting options
+gene_options = Tk.Listbox(root, selectmode=Tk.MULTIPLE, exportselection=0)
+gene_options.pack()
+for gene in all_genes:
+    gene_options.insert(Tk.END, gene)
 
-for gene in selectedGeneNames:
 
-    selectedGenesArray.append(gene_series[gene])
+def plot_stuff():
 
-times = gene_series['Blank']['times']
+    genes_chosen = []
+    for gen in list(gene_options.curselection()):
+        genes_chosen.append(all_genes[int(gen)])
 
-timesToGet = [times[0], times[10], times[20], times[30],times[40]]
+    summarizedDataArray = []
 
-list.reverse(timesToGet)
+    for gene_name in genes_chosen:
 
-summarizedDataArray = []
+        tempDataDict = {}
 
-for gene, gene_name in zip(selectedGenesArray, selectedGeneNames):
+        timeArray = np.array(gene_series[gene_name]['times'])
+        timeArray = (timeArray - timeArray[0]) / 60 # converts to minutes
+        print(timeArray)
 
-    tempDataDict = {}
+        selectedMeanRedPoints = []
+        selectedMeanGreenPoints = []
+        selectedMeanBluePoints = []
 
-    timeArray = gene['times']
+        for timeToGet in timesToGet:
+            index = np.argmin(np.abs(timeArray - float(timeToGet)))
+            print(index)
+            print(timeToGet)
 
-    selectedMeanRedPoints = []
-    selectedMeanGreenPoints = []
-    selectedMeanBluePoints = []
+            selectedMeanRedPoints.append(np.mean(gene_series[gene_name]['mean_red'], axis=0)[index])
+            selectedMeanGreenPoints.append(np.mean(gene_series[gene_name]['mean_green'], axis=0)[index])
+            selectedMeanBluePoints.append(np.mean(gene_series[gene_name]['mean_blue'], axis=0)[index])
 
-    for timeToGet in timesToGet:
-        index = np.where (timeArray == float(timeToGet))
+        tempDataDict['MeanRed'] = selectedMeanRedPoints
+        tempDataDict['MeanGreen'] = selectedMeanGreenPoints
+        tempDataDict['MeanBlue'] = selectedMeanBluePoints
+        tempDataDict['RelativeTimeInterp'] = timesToGet
+        tempDataDict['GeneName'] = gene_name
 
-        selectedMeanRedPoints.append(np.mean(gene_series[gene_name]['mean_red'], axis=0)[index])
-        selectedMeanGreenPoints.append(np.mean(gene_series[gene_name]['mean_green'], axis=0)[index])
-        selectedMeanBluePoints.append(np.mean(gene_series[gene_name]['mean_blue'], axis=0)[index])
+        summarizedDataArray.append(tempDataDict)
 
-    tempDataDict['MeanRed'] = selectedMeanRedPoints
-    tempDataDict['MeanGreen'] = selectedMeanGreenPoints
-    tempDataDict['MeanBlue'] = selectedMeanBluePoints
-    tempDataDict['relativeTimeInterp'] = timesToGet
-    tempDataDict['GeneName'] = gene_name
+    PlotLollipopGraph(summarizedDataArray, timesToGet, save_loc, plotGridX=8500)
+    root.destroy()
 
-    summarizedDataArray.append(tempDataDict)
 
-PlotLollipopGraph(summarizedDataArray, timesToGet, '/Users/barstowlab/Downloads/test', plotGridX=8500)
+# button for creating the plots
+plot_stuff_button = Tk.Button(root, text="Make Lollipop Graphs", command=plot_stuff)
+plot_stuff_button.pack()
+
+Tk.mainloop()
