@@ -4,7 +4,9 @@ import tkinter as tk
 import analysis_functions
 import csv
 
-TK_SILENCE_DEPRECATION=1
+tk.TK_SILENCE_DEPRECATION=1
+
+###############################################
 
 def create_notification(message):
     notification = tk.Tk()
@@ -188,21 +190,192 @@ def open_organize():
      
     organize.mainloop()
 
-
+###############################################
 
 # Analyze Screen
 
+def open_analyze():
+    from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+    from matplotlib.backend_bases import key_press_handler
+    from matplotlib.figure import Figure
+    import matplotlib.pyplot as plt
+    import temp_functions
+    import os
+
+    master.withdraw()
+    master.destroy()
+    
+    # Generate Variables
+    analyze = tk.Tk()
+    analyze.title("Analyze Images")
+    analyze.geometry("1600x800")
+
+    source_directory = tk.StringVar(analyze)
+    single_or_multiple = tk.StringVar(analyze)
+    single_or_multiple.set("multiple")
+
+    # Source directory
+    souce_text = tk.Label(analyze , textvariable=source_directory)
+    souce_text.pack()
+
+    lbox_files = tk.Listbox(analyze, exportselection = 0)
+    lbox_files.pack(side=tk.LEFT, padx =20)
+
+    def select_source_folder():
+        source_directory.set(filedialog.askdirectory())
+
+        lbox_files.delete(0, tk.END)
+        file_list = os.listdir(source_directory.get())
+        for item in file_list:
+            lbox_files.insert(tk.END, item)
+        lbox_files.update()
+        return
+
+    tk.Button(analyze, text = "Select Source", command=select_source_folder).pack(side = tk.LEFT, padx=10)
+    # tk.Button(analyze, text = "fill", command = fill_file_list_box).pack(side = tk.LEFT, padx=10)
 
 
+    color_keys = ['mean_green', 'mean_red', 'mean_blue', 'median_green', 'median_red', 'median_blue', 'mean_yellow',
+              'median_yellow']
+
+    lbox_colors = tk.Listbox(analyze, exportselection = 0)
+    lbox_colors.pack(side=tk.LEFT, padx =20)
+    for color in color_keys:
+        lbox_colors.insert(tk.END, color)
+    lbox_colors.update()
+
+    
+
+##############
+    def onclick(event):
+        ix = event.xdata
+
+        axss = []
+        for a in range(8):
+            _a = a
+            for b in range(12):
+                _b = b
+                axss.append(axs[_a,_b])
+
+        for i, ax in enumerate(axss):
+            if ax == event.inaxes:
+                i += 1
+                a = chr(int((i-1)/12)  + 65)
+                b = (i-1) % 12 + 1
+
+                if b < 10:
+                    b = "0" + str(b)
+                else:
+                    b = str(b)
+
+                print(a,b)
+                wellID = a + b
+
+                abx = plt.figure()
+                abx.add_subplot(111)
+
+                file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
+                color = lbox_colors.get(lbox_colors.curselection()[0])
+                color_info_file = file
+                gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+
+                times = gene_series["A01"]['times']
+                min_time = min(times)
+                max_time = max(times)
+                idxes = np.logical_and(min_time <= times, max_time >= times)
+
+                print("COLORS for " + wellID)
+                mean_colors = np.mean(gene_series[wellID][color], axis=0)
+
+                plt.title(gene_series[wellID]["gene"])
+                plt.plot(times[idxes], mean_colors[idxes])
+                abx.show()
+        return
+
+##############
+
+    # Add in graphs
+
+    figure_frame = tk.Frame(analyze, background='black', padx=2, pady=2)
+
+    x = np.linspace(0, 2 * np.pi, 400)
+    y = np.sin(x ** 2)
+
+    fig, axs = plt.subplots(8,12, sharex='col', sharey='row', gridspec_kw={'hspace': 0, 'wspace': 0})
+    fig.figsize=[16,10]
+    fig.dpi = 120
+    
+    canvas = FigureCanvasTkAgg(fig, master=figure_frame)
+    fig.tight_layout()
+    canvas.draw()
+
+
+
+    def update_graph():
+        file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
+        print(file)
+
+        color = lbox_colors.get(lbox_colors.curselection()[0])
+        color_info_file = file
+        gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+
+        all_genes = list(gene_series.keys())
+        times = gene_series["A01"]['times']
+        min_time = min(times)
+        max_time = max(times)
+        idxes = np.logical_and(min_time <= times, max_time >= times)
+
+        for wellID in gene_series:
+            a = gene_series[wellID]["well_row"] - 0
+            b = gene_series[wellID]["well_column"] - 1
+            x = a*12+b
+            print(a,b,x)
+            mean_colors = np.mean(gene_series[wellID][color], axis=0)
+            axs[a ,b].cla()
+
+            axs[a,b].tick_params(
+                axis='x',
+                which='both',
+                bottom=False,    
+                top=False,      
+                labelbottom=False)
+            axs[a,b].tick_params(
+                axis='y',     
+                which='both',     
+                left=False,    
+                right=False,      
+                labelbottom=False)
+
+            if gene_series[wellID]["gene"] == "Blank":
+                axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
+                print(type(axs[a,b]))
+            else:
+                axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
+
+        canvas.draw()
+
+
+    canvas.get_tk_widget().pack(padx=4, pady=4)
+    figure_frame.pack()
+
+    tk.Button(analyze, text = "Update Graph", command=update_graph).pack()
+
+    clicker = fig.canvas.mpl_connect('button_press_event', onclick)
+
+    analyze.mainloop()
+
+
+###############################################
 
 # Set up Main Selection Screen
 master = tk.Tk()
 master.title("Jurgensen Well Analyzer Demo")
-master.geometry("500x300")
+master.geometry("300x150")
 
 tk.Label(master, text = "Select which function you want to perform").pack()
 tk.Button(master, text = "Generate Barcodes", command = open_generate).pack()
 tk.Button(master, text = "Organize by Barcodes", command = open_organize).pack()
+tk.Button(master, text = "Analyze Plates", command = open_analyze).pack()
 
 master.mainloop()
 
