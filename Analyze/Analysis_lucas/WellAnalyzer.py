@@ -2,6 +2,7 @@ import numpy as np
 from tkinter import filedialog
 import tkinter as tk
 import analysis_functions
+import threading
 import csv
 
 tk.TK_SILENCE_DEPRECATION=1
@@ -195,12 +196,15 @@ def open_organize():
 # Analyze Screen
 
 def open_analyze():
+    from tkinter import ttk, HORIZONTAL
+    import matplotlib
     from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
     from matplotlib.backend_bases import key_press_handler
     from matplotlib.figure import Figure
     import matplotlib.pyplot as plt
     import temp_functions
     import os
+    matplotlib.use("TkAgg")
 
     master.withdraw()
     master.destroy()
@@ -211,15 +215,22 @@ def open_analyze():
     analyze.geometry("1600x800")
 
     source_directory = tk.StringVar(analyze)
+    current_data = tk.StringVar(analyze)
     single_or_multiple = tk.StringVar(analyze)
     single_or_multiple.set("multiple")
 
-    # Source directory
-    souce_text = tk.Label(analyze , textvariable=source_directory)
-    souce_text.pack()
+    left_frame = tk.Frame(analyze, relief=tk.RAISED, bd=2)
+    figure_frame = tk.Frame(analyze, background='black', padx=2, pady=2)
+    right_frame = tk.Frame(analyze, relief=tk.RAISED, bd=2)
 
-    lbox_files = tk.Listbox(analyze, exportselection = 0)
-    lbox_files.pack(side=tk.LEFT, padx =20)
+
+############### LEFT FRAME   ###########################
+    # Source directory
+    souce_text = tk.Label(left_frame, textvariable=source_directory)
+    souce_text.grid(row=0,column=0, sticky="ew", padx=5, pady=5)
+
+    lbox_files = tk.Listbox(left_frame, exportselection = 0)
+    lbox_files.grid(row=1,column=0, sticky="ew", padx=5, pady=5)
 
     def select_source_folder():
         source_directory.set(filedialog.askdirectory())
@@ -231,25 +242,70 @@ def open_analyze():
         lbox_files.update()
         return
 
-    tk.Button(analyze, text = "Select Source", command=select_source_folder).pack(side = tk.LEFT, padx=10)
+    tk.Button(left_frame, text = "Select Source", command=select_source_folder).grid(\
+        row=2,column=0, sticky="ew", padx=5, pady=5)
     # tk.Button(analyze, text = "fill", command = fill_file_list_box).pack(side = tk.LEFT, padx=10)
 
 
     color_keys = ['mean_green', 'mean_red', 'mean_blue', 'median_green', 'median_red', 'median_blue', 'mean_yellow',
               'median_yellow']
 
-    lbox_colors = tk.Listbox(analyze, exportselection = 0)
-    lbox_colors.pack(side=tk.LEFT, padx =20)
+    lbox_colors = tk.Listbox(left_frame, exportselection = 0)
+    lbox_colors.grid(row=3,column=0, sticky="ew", padx=5, pady=5)
     for color in color_keys:
         lbox_colors.insert(tk.END, color)
     lbox_colors.update()
 
+
+    # Namespace and execute functions
+    text_entry = tk.Text(left_frame, height=10, width=30).grid(row=4,column=0, sticky="ew", padx=5, pady=5)
+
+
+############### RIGHT FRAME  ###########################
+    operation = tk.StringVar(analyze)
+    operation.set("view")
+    tk.Label(right_frame, text = "Click Operation:").grid(row=0,column=0, sticky="ew", padx=5, pady=5)
+    tk.Radiobutton(right_frame, text = "Select Hits", variable=operation, value = "select").grid(row=1,column=0, sticky="ew", padx=5, pady=5)
+    tk.Radiobutton(right_frame, text = "View Graph", variable=operation, value = "view").grid(row=2,column=0, sticky="ew", padx=5, pady=5)
+    lbox_hits = tk.Listbox(right_frame, exportselection = 0)
+    lbox_hits.grid(row=3,column=0, sticky="ew", padx=5, pady=5)
+
+
+    hit_list = []
+
+    def update_hit_list():
+        lbox_hits.delete(0,tk.END)
+        for item in hit_list:
+            lbox_hits.insert(tk.END,item)
+        lbox_hits.update()
+        return
+
+    def add_hit(gene):
+        if gene not in hit_list:
+            hit_list.append(gene)
+            update_hit_list()
+        return
     
+    def remove_hit():
+        gene = lbox_hits.get(lbox_hits.curselection()[0])
+        if gene in hit_list:
+            hit_list.remove(gene)
+            update_hit_list()
+        return
 
-##############
+    def save_hits():
+        save_location = filedialog.asksaveasfilename()
+        with open(save_location, 'w') as f:
+            for hit in hit_list:
+                f.writelines(hit + "\n")
+
+
+    tk.Button(right_frame, text="Remove Hit", command=remove_hit).grid(row=4,column=0,sticky="ew",padx=5,pady=5)
+    tk.Button(right_frame, text="Save Hits", command=save_hits).grid(row=5,column=0,sticky="ew",padx=5,pady=5)
+
+    
+############### MIDDLE FRAME ###########################
     def onclick(event):
-        ix = event.xdata
-
         axss = []
         for a in range(8):
             _a = a
@@ -271,37 +327,48 @@ def open_analyze():
                 print(a,b)
                 wellID = a + b
 
-                abx = plt.figure()
-                abx.add_subplot(111)
+                if operation.get() == "select":
+                    file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
+                    # color = lbox_colors.get(lbox_colors.curselection()[0])
+                    color_info_file = file
+                    gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+                    add_hit(gene_series[wellID]["gene"])
+                    
 
-                file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
-                color = lbox_colors.get(lbox_colors.curselection()[0])
-                color_info_file = file
-                gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+                if operation.get() == "view":
+                    abx = plt.figure()
+                    abx.add_subplot(111)
 
-                times = gene_series["A01"]['times']
-                min_time = min(times)
-                max_time = max(times)
-                idxes = np.logical_and(min_time <= times, max_time >= times)
+                    file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
+                    color = lbox_colors.get(lbox_colors.curselection()[0])
+                    color_info_file = file
+                    gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
 
-                print("COLORS for " + wellID)
-                mean_colors = np.mean(gene_series[wellID][color], axis=0)
+                    times = gene_series["A01"]['times']
+                    min_time = min(times)
+                    max_time = max(times)
+                    idxes = np.logical_and(min_time <= times, max_time >= times)
 
-                plt.title(gene_series[wellID]["gene"])
-                plt.plot(times[idxes], mean_colors[idxes])
-                abx.show()
+                    print("COLORS for " + wellID)
+                    mean_colors = np.mean(gene_series[wellID][color], axis=0)
+
+                    plt.title(gene_series[wellID]["gene"])
+                    plt.ylim([0,300])
+                    plt.plot(times[idxes], mean_colors[idxes])
+                    abx.show()
+                else:
+                    print("invalid value for variable 'operation'")
+
         return
 
-##############
 
-    # Add in graphs
+    fig, axs = plt.subplots(8,12, sharex='all', sharey='all', gridspec_kw={'hspace': 0, 'wspace': 0})
 
-    figure_frame = tk.Frame(analyze, background='black', padx=2, pady=2)
+    for a in range(len(axs)):
+        for b in range(len(axs[a])):
+            axs[a,b].axes.get_yaxis().set_visible(False)
+            axs[a,b].axes.get_xaxis().set_visible(False)
 
-    x = np.linspace(0, 2 * np.pi, 400)
-    y = np.sin(x ** 2)
-
-    fig, axs = plt.subplots(8,12, sharex='col', sharey='row', gridspec_kw={'hspace': 0, 'wspace': 0})
     fig.figsize=[16,10]
     fig.dpi = 120
     
@@ -310,57 +377,75 @@ def open_analyze():
     canvas.draw()
 
 
-
     def update_graph():
-        file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
-        print(file)
+        try:
+            file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
+            current_data.set(lbox_files.get(lbox_files.curselection()[0]))
+            print(file)
 
-        color = lbox_colors.get(lbox_colors.curselection()[0])
-        color_info_file = file
-        gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+            color = lbox_colors.get(lbox_colors.curselection()[0])
+            color_info_file = file
+            gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+            all_genes = list(gene_series.keys())
+            times = gene_series["A01"]['times']
+            min_time = min(times)
+            max_time = max(times)
+            idxes = np.logical_and(min_time <= times, max_time >= times)
 
-        all_genes = list(gene_series.keys())
-        times = gene_series["A01"]['times']
-        min_time = min(times)
-        max_time = max(times)
-        idxes = np.logical_and(min_time <= times, max_time >= times)
+            current_data.set("Processing '" + lbox_files.get(lbox_files.curselection()[0]) + "' ..." )
+            figure_frame.update()
+            for wellID in gene_series:
+                a = gene_series[wellID]["well_row"] - 0
+                b = gene_series[wellID]["well_column"] - 1
+                x = a*12+b
+                print(a,b,x)
+                mean_colors = np.mean(gene_series[wellID][color], axis=0)
+                axs[a ,b].cla()
 
-        for wellID in gene_series:
-            a = gene_series[wellID]["well_row"] - 0
-            b = gene_series[wellID]["well_column"] - 1
-            x = a*12+b
-            print(a,b,x)
-            mean_colors = np.mean(gene_series[wellID][color], axis=0)
-            axs[a ,b].cla()
+                axs[a,b].tick_params(
+                    axis='x',
+                    bottom=False,    
+                    top=False)
+                axs[a,b].tick_params(
+                    axis='y',     
+                    left=False,    
+                    right=False)
+                # axs[a,b].set_title("demo")
+                if gene_series[wellID]["gene"] != "Blank":
+                    axs[a,b].text(0,1,gene_series[wellID]["gene"], fontsize=5, style='italic')
+                axs[a,b].set_ylim([0,300])
+                axs[a,b].axes.get_yaxis().set_visible(False)
+                axs[a,b].axes.get_xaxis().set_visible(False)
+                if gene_series[wellID]["gene"] == "Blank":
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
+                else:
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
+            current_data.set(lbox_files.get(lbox_files.curselection()[0]) + "  by  " + color)
+            canvas.draw()
+        except IndexError:
+            current_data.set("Error: No File or Color Selected")
+        except:
+            current_data.set("Error: Issue with file: '" + lbox_files.get(lbox_files.curselection()[0]) + "'")
 
-            axs[a,b].tick_params(
-                axis='x',
-                which='both',
-                bottom=False,    
-                top=False,      
-                labelbottom=False)
-            axs[a,b].tick_params(
-                axis='y',     
-                which='both',     
-                left=False,    
-                right=False,      
-                labelbottom=False)
-
-            if gene_series[wellID]["gene"] == "Blank":
-                axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
-                print(type(axs[a,b]))
-            else:
-                axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
-
-        canvas.draw()
-
-
-    canvas.get_tk_widget().pack(padx=4, pady=4)
-    figure_frame.pack()
-
-    tk.Button(analyze, text = "Update Graph", command=update_graph).pack()
+    tk.Label(figure_frame, textvariable=current_data).grid(row=1,column=0, sticky="ew", padx=5, pady=5)
+    tk.Button(figure_frame, text = "Update Graph", command=update_graph).grid(row=2,column=0, sticky="ew", padx=5, pady=5)
 
     clicker = fig.canvas.mpl_connect('button_press_event', onclick)
+    canvas.get_tk_widget().grid(row=0,column=0, sticky="ew", padx=5, pady=5)
+
+
+############### COMBINE      ###########################
+
+
+    def on_closing():
+        plt.close("all")
+        analyze.destroy()
+
+    analyze.protocol("WM_DELETE_WINDOW", on_closing)
+
+    left_frame.grid(row=0,column=0,sticky="ew",padx=5,pady=5)
+    figure_frame.grid(row=0,column=1, sticky="ew", padx=5, pady=5)
+    right_frame.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
 
     analyze.mainloop()
 

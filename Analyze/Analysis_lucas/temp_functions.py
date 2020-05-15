@@ -1,6 +1,6 @@
 def num_from_well_ID(wellID):
     return (ord(wellID[0])-65) * 12 + int(wellID[1:3])
-
+ 
 
 def import_gene_color_change_dict(color_info_file):
     import xml.etree.ElementTree as ET
