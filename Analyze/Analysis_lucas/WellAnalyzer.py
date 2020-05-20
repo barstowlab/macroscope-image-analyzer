@@ -226,8 +226,8 @@ def open_analyze():
 
 ############### LEFT FRAME   ###########################
     # Source directory
-    souce_text = tk.Label(left_frame, textvariable=source_directory)
-    souce_text.grid(row=0,column=0, sticky="ew", padx=5, pady=5)
+    # souce_text = tk.Label(left_frame, textvariable=source_directory)
+    # souce_text.grid(row=0,column=0, sticky="ew", padx=5, pady=5)
 
     lbox_files = tk.Listbox(left_frame, exportselection = 0)
     lbox_files.grid(row=1,column=0, sticky="ew", padx=5, pady=5)
