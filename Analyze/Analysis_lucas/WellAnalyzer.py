@@ -182,7 +182,7 @@ def open_organize():
     def select_source_folder():
         source_directory.set(filedialog.askdirectory())
 
-    tk.Button(organize, text = "Select Source", command = select_source_folder).pack()
+    tk.Button(organize, text = "Select Directory", command = select_source_folder).pack()
 
     # Organize by Barcodes - finished with inputs
     tk.Button(organize, text = "Organize by Barcodes", command = run_organize).pack()
@@ -217,6 +217,9 @@ def open_analyze():
     source_directory = tk.StringVar(analyze)
     current_data = tk.StringVar(analyze)
     single_or_multiple = tk.StringVar(analyze)
+    graph_color = tk.StringVar(analyze)
+    graph_source = tk.StringVar(analyze)
+    graph_file_name = tk.StringVar(analyze)
     single_or_multiple.set("multiple")
 
     left_frame = tk.Frame(analyze, relief=tk.RAISED, bd=2)
@@ -225,9 +228,8 @@ def open_analyze():
 
 
 ############### LEFT FRAME   ###########################
-    # Source directory
-    # souce_text = tk.Label(left_frame, textvariable=source_directory)
-    # souce_text.grid(row=0,column=0, sticky="ew", padx=5, pady=5)
+    min_max_default = tk.BooleanVar()
+    min_max_default.set(True)
 
     lbox_files = tk.Listbox(left_frame, exportselection = 0)
     lbox_files.grid(row=1,column=0, sticky="ew", padx=5, pady=5)
@@ -250,6 +252,7 @@ def open_analyze():
     color_keys = ['mean_green', 'mean_red', 'mean_blue', 'median_green', 'median_red', 'median_blue', 'mean_yellow',
               'median_yellow']
 
+    
     lbox_colors = tk.Listbox(left_frame, exportselection = 0)
     lbox_colors.grid(row=3,column=0, sticky="ew", padx=5, pady=5)
     for color in color_keys:
@@ -257,8 +260,24 @@ def open_analyze():
     lbox_colors.update()
 
 
+    min_max_frame = tk.Frame(left_frame, relief=tk.RAISED, bd=2)
+
+    entry_min = tk.Entry(min_max_frame) 
+    entry_max = tk.Entry(min_max_frame) 
+    tk.Label(min_max_frame, text="Min Time").grid(row=0, column=0)
+    tk.Label(min_max_frame, text="Max Time").grid(row=0, column=1)
+    entry_min.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+    entry_max.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+
+    tk.Radiobutton(min_max_frame, text = "Use Default Bounds", variable=min_max_default, value=True).grid(row=2,column=0, sticky="ew", padx=5, pady=5)
+    tk.Radiobutton(min_max_frame, text = "Use Selected Bounds", variable=min_max_default, value=False).grid(row=2,column=1, sticky="ew", padx=5, pady=5)
+
+    min_max_frame.grid(row=4, column=0, sticky="ew", padx=5, pady=5)
+
+
+
     # Namespace and execute functions
-    text_entry = tk.Text(left_frame, height=10, width=30).grid(row=4,column=0, sticky="ew", padx=5, pady=5)
+    # text_entry = tk.Text(left_frame, height=10, width=30).grid(row=4,column=0, sticky="ew", padx=5, pady=5)
 
 
 ############### RIGHT FRAME  ###########################
@@ -305,6 +324,7 @@ def open_analyze():
 
     
 ############### MIDDLE FRAME ###########################
+
     def onclick(event):
         axss = []
         for a in range(8):
@@ -328,21 +348,18 @@ def open_analyze():
                 wellID = a + b
 
                 if operation.get() == "select":
-                    file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
-                    # color = lbox_colors.get(lbox_colors.curselection()[0])
+                    file = graph_source.get()
                     color_info_file = file
                     gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
                     add_hit(gene_series[wellID]["gene"])
                     
 
                 if operation.get() == "view":
+                    print(graph_color.get(), graph_source.get())
                     abx = plt.figure()
                     abx.add_subplot(111)
 
-                    file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
-                    color = lbox_colors.get(lbox_colors.curselection()[0])
-                    color_info_file = file
-                    gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+                    gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
 
                     times = gene_series["A01"]['times']
                     min_time = min(times)
@@ -350,9 +367,11 @@ def open_analyze():
                     idxes = np.logical_and(min_time <= times, max_time >= times)
 
                     print("COLORS for " + wellID)
-                    mean_colors = np.mean(gene_series[wellID][color], axis=0)
+                    mean_colors = np.mean(gene_series[wellID][graph_color.get()], axis=0)
 
                     plt.title(gene_series[wellID]["gene"])
+                    plt.ylabel(graph_color.get() + " Intensity", fontsize=16)
+                    plt.xlabel('Time (seconds)', fontsize=16)
                     plt.ylim([0,300])
                     plt.plot(times[idxes], mean_colors[idxes])
                     abx.show()
@@ -379,27 +398,30 @@ def open_analyze():
 
     def update_graph():
         try:
-            file = source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0])
-            current_data.set(lbox_files.get(lbox_files.curselection()[0]))
-            print(file)
+            graph_file_name.set(lbox_files.get(lbox_files.curselection()[0]))
+            graph_source.set(source_directory.get() + "/" + lbox_files.get(lbox_files.curselection()[0]))
+            graph_color.set(lbox_colors.get(lbox_colors.curselection()[0]))
+            print(graph_source.get())
 
-            color = lbox_colors.get(lbox_colors.curselection()[0])
-            color_info_file = file
-            gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
+            gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
             all_genes = list(gene_series.keys())
             times = gene_series["A01"]['times']
-            min_time = min(times)
-            max_time = max(times)
+            if not min_max_default.get():
+                min_time = float(entry_min.get())
+                max_time = float(entry_max.get())
+            else:
+                min_time = min(times)
+                max_time = max(times)
             idxes = np.logical_and(min_time <= times, max_time >= times)
 
-            current_data.set("Processing '" + lbox_files.get(lbox_files.curselection()[0]) + "' ..." )
+            current_data.set("Processing '" + graph_file_name.get() + "' ..." )
             figure_frame.update()
             for wellID in gene_series:
                 a = gene_series[wellID]["well_row"] - 0
                 b = gene_series[wellID]["well_column"] - 1
                 x = a*12+b
                 print(a,b,x)
-                mean_colors = np.mean(gene_series[wellID][color], axis=0)
+                mean_colors = np.mean(gene_series[wellID][graph_color.get()], axis=0)
                 axs[a ,b].cla()
 
                 axs[a,b].tick_params(
@@ -410,25 +432,25 @@ def open_analyze():
                     axis='y',     
                     left=False,    
                     right=False)
-                # axs[a,b].set_title("demo")
+
                 if gene_series[wellID]["gene"] != "Blank":
                     axs[a,b].text(0,1,gene_series[wellID]["gene"], fontsize=5, style='italic')
                 axs[a,b].set_ylim([0,300])
-                axs[a,b].axes.get_yaxis().set_visible(False)
-                axs[a,b].axes.get_xaxis().set_visible(False)
+                # axs[a,b].axes.get_yaxis().set_visible(False)
+                # axs[a,b].axes.get_xaxis().set_visible(False)
                 if gene_series[wellID]["gene"] == "Blank":
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
                 else:
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
-            current_data.set(lbox_files.get(lbox_files.curselection()[0]) + "  by  " + color)
+            current_data.set(graph_file_name.get() + "  by  " + graph_color.get())
             canvas.draw()
         except IndexError:
-            current_data.set("Error: No File or Color Selected")
+            graph_file_name.set("Error: No File or Color Selected")
         except:
-            current_data.set("Error: Issue with file: '" + lbox_files.get(lbox_files.curselection()[0]) + "'")
+            graph_file_name.set("Error: Issue with file: '" + lbox_files.get(lbox_files.curselection()[0]) + "'")
 
     tk.Label(figure_frame, textvariable=current_data).grid(row=1,column=0, sticky="ew", padx=5, pady=5)
-    tk.Button(figure_frame, text = "Update Graph", command=update_graph).grid(row=2,column=0, sticky="ew", padx=5, pady=5)
+    tk.Button(left_frame, text = "Update Graph", command=update_graph).grid(row=5,column=0, sticky="ew", padx=5, pady=5)
 
     clicker = fig.canvas.mpl_connect('button_press_event', onclick)
     canvas.get_tk_widget().grid(row=0,column=0, sticky="ew", padx=5, pady=5)
