@@ -205,6 +205,7 @@ def open_analyze():
     import matplotlib.pyplot as plt
     import temp_functions
     import os
+    import csv
     matplotlib.use("TkAgg")
 
     master.withdraw()
@@ -213,7 +214,7 @@ def open_analyze():
     # Generate Variables
     analyze = tk.Tk()
     analyze.title("Analyze Images")
-    analyze.geometry("1600x800")
+    # analyze.geometry("1600x800")
 
     source_directory = tk.StringVar(analyze)
     current_data = tk.StringVar(analyze)
@@ -303,12 +304,17 @@ def open_analyze():
         lbox_hits.update()
         return
 
-    def add_hit(gene, wellID):
+    def toggle_hit(gene, wellID):
         gene_and_source = gene + " (" + graph_file_name.get() + ")"
         if gene_and_source not in hit_list:
             gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
             hit_dict[gene_and_source] = gene_series[wellID]
             hit_list.append(gene_and_source)
+            update_hit_list()
+            update_subgraph_hit(gene_and_source)
+        elif gene_and_source in hit_list:
+            hit_list.remove(gene_and_source)
+            del hit_dict[gene_and_source]
             update_hit_list()
             update_subgraph_hit(gene_and_source)
             
@@ -324,15 +330,85 @@ def open_analyze():
             update_hit_list()
             update_subgraph_hit(gene_and_source)
 
-    def save_hits():
-        save_location = filedialog.asksaveasfilename()
-        with open(save_location, 'w') as f:
-            f.writelines('<plateImage originatingFolder="" wellRadius="">')
-            for hit in hit_dict:
-                print("trying")
-                f.writelines(hit_dict[hit] + "\n")
-            f.writelines('</plateImage>')
 
+####################################
+    def save_hits():
+
+        def ExportListForCSV(original_list):
+            new_arr = []
+            for val in original_list:
+                new_arr.append(str(val))
+            return new_arr
+
+
+        # save_location = filedialog.asksaveasfilename()
+        # for hit in hit_dict:
+        
+
+
+        save_location = filedialog.asksaveasfilename()
+        gene_colors_dict = {}
+        times = np.array([])
+        for hit in hit_dict:
+            print(hit_dict[hit])
+            gene_and_source = hit_dict[hit]['gene']
+            times = hit_dict[hit]['times']
+            if gene_and_source not in gene_colors_dict:
+                gene_colors_dict[gene_and_source] = {}
+            for color in color_keys:
+                print(hit_dict[hit][color])
+                new_arr = np.reshape(hit_dict[hit][color], (1, len(hit_dict[hit][color][0])))
+                if color in gene_colors_dict[gene_and_source]:
+                    gene_colors_dict[gene_and_source][color] = np.vstack((gene_colors_dict[gene_and_source][color], new_arr))
+                else:
+                    gene_colors_dict[gene_and_source][color] = new_arr
+
+
+        with open(save_location, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csvwriter.writerow(['GeneName'] + ExportListForCSV(times))
+            for gene in gene_colors_dict:
+                for color in gene_colors_dict[gene]:
+                    mean_colors = np.mean(gene_colors_dict[gene][color], axis=0)
+                    std_colors = np.std(gene_colors_dict[gene][color], axis=0)
+                    row = [gene + ' ' + color] + ExportListForCSV(mean_colors)
+                    csvwriter.writerow(row)
+                    new_row = [gene + ' ' + color + ' std'] + ExportListForCSV(std_colors)
+                    csvwriter.writerow(new_row)    
+
+        # save_location = filedialog.asksaveasfilename()
+        # for hit in hit_dict:
+        #     gene_colors_dict = {}
+        #     times = np.array([])
+        #     for hit in hit_dict:
+        #         print(hit_dict[hit])
+        #         gene_and_source = hit_dict[hit]['gene']
+        #         times = hit_dict[hit]['times']
+        #         if gene_and_source not in gene_colors_dict:
+        #             gene_colors_dict[gene_and_source] = {}
+        #         for color in color_keys:
+        #             print(hit_dict[hit][color])
+        #             new_arr = np.reshape(hit_dict[hit][color], (1, len(hit_dict[hit][color][0])))
+        #             if color in gene_colors_dict[gene_and_source]:
+        #                 gene_colors_dict[gene_and_source][color] = np.vstack((gene_colors_dict[gene_and_source][color], new_arr))
+        #             else:
+        #                 gene_colors_dict[gene_and_source][color] = new_arr
+
+
+        # with open(save_location, 'w', newline='') as csvfile:
+        #     csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #     csvwriter.writerow(['GeneName'] + ExportListForCSV(times))
+        #     for gene in gene_colors_dict:
+        #         for color in gene_colors_dict[gene]:
+        #             mean_colors = np.mean(gene_colors_dict[gene][color], axis=0)
+        #             std_colors = np.std(gene_colors_dict[gene][color], axis=0)
+        #             row = [gene + ' ' + color] + ExportListForCSV(mean_colors)
+        #             csvwriter.writerow(row)
+        #             new_row = [gene + ' ' + color + ' std'] + ExportListForCSV(std_colors)
+        #             csvwriter.writerow(new_row)
+
+
+####################################
     def plot_hits():
         if len(hit_dict) != 0:
             abx = plt.figure()
@@ -389,7 +465,7 @@ def open_analyze():
 
                 if operation.get() == "select":
                     gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
-                    add_hit(gene_series[wellID]["gene"], wellID)
+                    toggle_hit(gene_series[wellID]["gene"], wellID)
                     
                 elif operation.get() == "view":
                     print(graph_color.get(), graph_source.get())
@@ -454,7 +530,7 @@ def open_analyze():
                 if gene_series[wellID]["gene"] == "Blank":
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
                 elif gene_and_source in hit_list:
-                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "green")
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "yellow")
                 else:
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
         canvas.draw()
@@ -505,7 +581,7 @@ def open_analyze():
                 if gene_series[wellID]["gene"] == "Blank":
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
                 elif gene_and_source in hit_list:
-                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "green")
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "yellow")
                 else:
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
                 # fig.show()
@@ -533,9 +609,9 @@ def open_analyze():
 
     analyze.protocol("WM_DELETE_WINDOW", on_closing)
 
-    left_frame.grid(row=0,column=0,sticky="ew",padx=5,pady=5)
-    figure_frame.grid(row=0,column=1, sticky="ew", padx=5, pady=5)
-    right_frame.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
+    left_frame.grid(row=0,column=0,sticky="ew",padx=10,pady=5)
+    figure_frame.grid(row=0,column=1, sticky="ew", padx=5, pady=20)
+    right_frame.grid(row=0, column=2, sticky="ew", padx=10, pady=5)
 
     analyze.mainloop()
 
