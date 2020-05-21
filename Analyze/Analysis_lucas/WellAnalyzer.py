@@ -7,6 +7,7 @@ import csv
 
 tk.TK_SILENCE_DEPRECATION=1
 
+
 ###############################################
 
 def create_notification(message):
@@ -226,6 +227,7 @@ def open_analyze():
     figure_frame = tk.Frame(analyze, background='black', padx=2, pady=2)
     right_frame = tk.Frame(analyze, relief=tk.RAISED, bd=2)
 
+    
 
 ############### LEFT FRAME   ###########################
     min_max_default = tk.BooleanVar()
@@ -262,15 +264,15 @@ def open_analyze():
 
     min_max_frame = tk.Frame(left_frame, relief=tk.RAISED, bd=2)
 
-    entry_min = tk.Entry(min_max_frame) 
-    entry_max = tk.Entry(min_max_frame) 
+    entry_min = tk.Entry(min_max_frame, width=10) 
+    entry_max = tk.Entry(min_max_frame, width=10 ) 
     tk.Label(min_max_frame, text="Min Time").grid(row=0, column=0)
     tk.Label(min_max_frame, text="Max Time").grid(row=0, column=1)
     entry_min.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
     entry_max.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
 
-    tk.Radiobutton(min_max_frame, text = "Use Default Bounds", variable=min_max_default, value=True).grid(row=2,column=0, sticky="ew", padx=5, pady=5)
-    tk.Radiobutton(min_max_frame, text = "Use Selected Bounds", variable=min_max_default, value=False).grid(row=2,column=1, sticky="ew", padx=5, pady=5)
+    tk.Radiobutton(min_max_frame, text = "Default Bounds", variable=min_max_default, value=True).grid(row=2,column=0, sticky="ew", padx=5, pady=5)
+    tk.Radiobutton(min_max_frame, text = "Selected Bounds", variable=min_max_default, value=False).grid(row=2,column=1, sticky="ew", padx=5, pady=5)
 
     min_max_frame.grid(row=4, column=0, sticky="ew", padx=5, pady=5)
 
@@ -286,41 +288,79 @@ def open_analyze():
     tk.Label(right_frame, text = "Click Operation:").grid(row=0,column=0, sticky="ew", padx=5, pady=5)
     tk.Radiobutton(right_frame, text = "Select Hits", variable=operation, value = "select").grid(row=1,column=0, sticky="ew", padx=5, pady=5)
     tk.Radiobutton(right_frame, text = "View Graph", variable=operation, value = "view").grid(row=2,column=0, sticky="ew", padx=5, pady=5)
-    lbox_hits = tk.Listbox(right_frame, exportselection = 0)
+    lbox_hits = tk.Listbox(right_frame, exportselection = 0, width = 30)
     lbox_hits.grid(row=3,column=0, sticky="ew", padx=5, pady=5)
 
+
+    hit_dict = {}
 
     hit_list = []
 
     def update_hit_list():
         lbox_hits.delete(0,tk.END)
-        for item in hit_list:
-            lbox_hits.insert(tk.END,item)
+        for gene_and_source in hit_list:
+            lbox_hits.insert(tk.END, gene_and_source)
         lbox_hits.update()
         return
 
-    def add_hit(gene):
-        if gene not in hit_list:
-            hit_list.append(gene)
+    def add_hit(gene, wellID):
+        gene_and_source = gene + " (" + graph_file_name.get() + ")"
+        if gene_and_source not in hit_list:
+            gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+            hit_dict[gene_and_source] = gene_series[wellID]
+            hit_list.append(gene_and_source)
             update_hit_list()
+            update_subgraph_hit(gene_and_source)
+            
+
         return
     
     def remove_hit():
-        gene = lbox_hits.get(lbox_hits.curselection()[0])
-        if gene in hit_list:
-            hit_list.remove(gene)
+        gene_and_source = lbox_hits.get(lbox_hits.curselection()[0])
+        print(hit_dict)
+        if gene_and_source in hit_list:
+            hit_list.remove(gene_and_source)
+            del hit_dict[gene_and_source]
             update_hit_list()
-        return
+            update_subgraph_hit(gene_and_source)
 
     def save_hits():
         save_location = filedialog.asksaveasfilename()
         with open(save_location, 'w') as f:
-            for hit in hit_list:
-                f.writelines(hit + "\n")
+            f.writelines('<plateImage originatingFolder="" wellRadius="">')
+            for hit in hit_dict:
+                print("trying")
+                f.writelines(hit_dict[hit] + "\n")
+            f.writelines('</plateImage>')
+
+    def plot_hits():
+        if len(hit_dict) != 0:
+            abx = plt.figure()
+            abx.add_subplot(111)
+
+            plt.ylim([0,300])
+            plt.ylabel(graph_color.get() + " Intensity", fontsize=16)
+            plt.xlabel('Time (seconds)', fontsize=16)
+
+            for hit in hit_dict:
+                times = hit_dict[hit]["times"]
+                min_time = min(times)
+                max_time = max(times)
+                idxes = np.logical_and(min_time <= times, max_time >= times)
+                mean_colors = np.mean(hit_dict[hit][graph_color.get()], axis=0)
+                plt.plot(times[idxes], mean_colors[idxes], label=hit)
+            abx.legend()
+            abx.show()
+        return
+
+    
+
 
 
     tk.Button(right_frame, text="Remove Hit", command=remove_hit).grid(row=4,column=0,sticky="ew",padx=5,pady=5)
     tk.Button(right_frame, text="Save Hits", command=save_hits).grid(row=5,column=0,sticky="ew",padx=5,pady=5)
+    tk.Button(right_frame, text="Plot Hits", command=plot_hits).grid(row=6,column=0,sticky="ew",padx=5,pady=5)
+    tk.Label(right_frame, text="Plotted color same as current table").grid(row=7,column=0,sticky="ew",padx=5,pady=5)
 
     
 ############### MIDDLE FRAME ###########################
@@ -348,13 +388,10 @@ def open_analyze():
                 wellID = a + b
 
                 if operation.get() == "select":
-                    file = graph_source.get()
-                    color_info_file = file
-                    gene_series = temp_functions.import_gene_color_change_dict(color_info_file)
-                    add_hit(gene_series[wellID]["gene"])
+                    gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+                    add_hit(gene_series[wellID]["gene"], wellID)
                     
-
-                if operation.get() == "view":
+                elif operation.get() == "view":
                     print(graph_color.get(), graph_source.get())
                     abx = plt.figure()
                     abx.add_subplot(111)
@@ -375,8 +412,9 @@ def open_analyze():
                     plt.ylim([0,300])
                     plt.plot(times[idxes], mean_colors[idxes])
                     abx.show()
+
                 else:
-                    print("invalid value for variable 'operation'")
+                    print("invalid value for variable 'operation': " + operation.get())
 
         return
 
@@ -395,6 +433,32 @@ def open_analyze():
     fig.tight_layout()
     canvas.draw()
 
+    def update_subgraph_hit(gene_and_source):
+        gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+        for wellID in gene_series: 
+            gene_and_source_cur = gene_series[wellID]["gene"] + " (" + graph_file_name.get() + ")"
+            if gene_and_source == gene_and_source_cur:
+                times = gene_series[wellID]['times']
+                if not min_max_default.get():
+                    min_time = float(entry_min.get())
+                    max_time = float(entry_max.get())
+                else:
+                    min_time = min(times)
+                    max_time = max(times)
+                idxes = np.logical_and(min_time <= times, max_time >= times)
+                a = gene_series[wellID]["well_row"] - 0
+                b = gene_series[wellID]["well_column"] - 1
+                x = a*12+b
+                print(a,b,x)
+                mean_colors = np.mean(gene_series[wellID][graph_color.get()], axis=0)
+                if gene_series[wellID]["gene"] == "Blank":
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
+                elif gene_and_source in hit_list:
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "green")
+                else:
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
+        canvas.draw()
+
 
     def update_graph():
         try:
@@ -404,7 +468,6 @@ def open_analyze():
             print(graph_source.get())
 
             gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
-            all_genes = list(gene_series.keys())
             times = gene_series["A01"]['times']
             if not min_max_default.get():
                 min_time = float(entry_min.get())
@@ -438,12 +501,17 @@ def open_analyze():
                 axs[a,b].set_ylim([0,300])
                 # axs[a,b].axes.get_yaxis().set_visible(False)
                 # axs[a,b].axes.get_xaxis().set_visible(False)
+                gene_and_source = gene_series[wellID]["gene"] + " (" + graph_file_name.get() + ")"
                 if gene_series[wellID]["gene"] == "Blank":
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "gray")
+                elif gene_and_source in hit_list:
+                    axs[a, b].plot(times[idxes], mean_colors[idxes], color = "green")
                 else:
                     axs[a, b].plot(times[idxes], mean_colors[idxes], color = "blue")
+                # fig.show()
             current_data.set(graph_file_name.get() + "  by  " + graph_color.get())
             canvas.draw()
+
         except IndexError:
             graph_file_name.set("Error: No File or Color Selected")
         except:
