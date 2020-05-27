@@ -43,7 +43,6 @@ img_info = inputParameterValues["img_info"]
 
 # the location to save the generated xml file and sample positioning of the plates
 save_location = inputParameterValues["save_location"]
-print("\n\n\n\n" + save_location + "\n\n\n\n")
 
 # location where to get the "PlateFolder"s
 folder_location = inputParameterValues["folder_location"]

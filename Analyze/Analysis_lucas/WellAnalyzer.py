@@ -188,9 +188,28 @@ def open_organize():
     # Organize by Barcodes - finished with inputs
     tk.Button(organize, text = "Organize by Barcodes", command = run_organize).pack()
 
-    
-     
     organize.mainloop()
+
+
+###############################################
+
+def open_collect():
+    master.withdraw()
+    master.destroy()
+
+    collect = tk.Tk()
+    collect.title("Organize by Barcodes")
+    collect.geometry("500x300")
+
+    plate_folder
+    well_info_csv
+    image_type = ".jpg"
+
+    save_location
+    folder_location
+
+
+    collect.mainloop()
 
 ###############################################
 
@@ -294,7 +313,6 @@ def open_analyze():
 
 
     hit_dict = {}
-
     hit_list = []
 
     def update_hit_list():
@@ -302,12 +320,12 @@ def open_analyze():
         for gene_and_source in hit_list:
             lbox_hits.insert(tk.END, gene_and_source)
         lbox_hits.update()
-        return
+
 
     def toggle_hit(gene, wellID):
         gene_and_source = gene + " (" + graph_file_name.get() + ")"
         if gene_and_source not in hit_list:
-            gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+            gene_series = temp_functions.read_from_xml(graph_source.get())
             hit_dict[gene_and_source] = gene_series[wellID]
             hit_list.append(gene_and_source)
             update_hit_list()
@@ -318,8 +336,6 @@ def open_analyze():
             update_hit_list()
             update_subgraph_hit(gene_and_source)
             
-
-        return
     
     def remove_hit():
         gene_and_source = lbox_hits.get(lbox_hits.curselection()[0])
@@ -331,84 +347,28 @@ def open_analyze():
             update_subgraph_hit(gene_and_source)
 
 
-####################################
     def save_hits():
-
-        def ExportListForCSV(original_list):
-            new_arr = []
-            for val in original_list:
-                new_arr.append(str(val))
-            return new_arr
-
-
-        # save_location = filedialog.asksaveasfilename()
-        # for hit in hit_dict:
-        
-
-
         save_location = filedialog.asksaveasfilename()
-        gene_colors_dict = {}
         times = np.array([])
-        for hit in hit_dict:
-            print(hit_dict[hit])
-            gene_and_source = hit_dict[hit]['gene']
-            times = hit_dict[hit]['times']
-            if gene_and_source not in gene_colors_dict:
-                gene_colors_dict[gene_and_source] = {}
-            for color in color_keys:
-                print(hit_dict[hit][color])
-                new_arr = np.reshape(hit_dict[hit][color], (1, len(hit_dict[hit][color][0])))
-                if color in gene_colors_dict[gene_and_source]:
-                    gene_colors_dict[gene_and_source][color] = np.vstack((gene_colors_dict[gene_and_source][color], new_arr))
-                else:
-                    gene_colors_dict[gene_and_source][color] = new_arr
-
-
         with open(save_location, 'w', newline='') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            csvwriter.writerow(['GeneName'] + ExportListForCSV(times))
-            for gene in gene_colors_dict:
-                for color in gene_colors_dict[gene]:
-                    mean_colors = np.mean(gene_colors_dict[gene][color], axis=0)
-                    std_colors = np.std(gene_colors_dict[gene][color], axis=0)
-                    row = [gene + ' ' + color] + ExportListForCSV(mean_colors)
-                    csvwriter.writerow(row)
-                    new_row = [gene + ' ' + color + ' std'] + ExportListForCSV(std_colors)
-                    csvwriter.writerow(new_row)    
-
-        # save_location = filedialog.asksaveasfilename()
-        # for hit in hit_dict:
-        #     gene_colors_dict = {}
-        #     times = np.array([])
-        #     for hit in hit_dict:
-        #         print(hit_dict[hit])
-        #         gene_and_source = hit_dict[hit]['gene']
-        #         times = hit_dict[hit]['times']
-        #         if gene_and_source not in gene_colors_dict:
-        #             gene_colors_dict[gene_and_source] = {}
-        #         for color in color_keys:
-        #             print(hit_dict[hit][color])
-        #             new_arr = np.reshape(hit_dict[hit][color], (1, len(hit_dict[hit][color][0])))
-        #             if color in gene_colors_dict[gene_and_source]:
-        #                 gene_colors_dict[gene_and_source][color] = np.vstack((gene_colors_dict[gene_and_source][color], new_arr))
-        #             else:
-        #                 gene_colors_dict[gene_and_source][color] = new_arr
+            for hit in hit_dict:
+                times = hit_dict[hit]['times']
+                gene = hit_dict[hit]['gene']
+                print(gene)
+                times = hit_dict[hit]['times']
+                print("times" + str(type(times)))
+                csvwriter.writerow([hit] + (times).tolist())
+                for color in color_keys:
+                    mean_colors = np.mean(hit_dict[hit][color], axis=0)
+                    std_colors = np.std(hit_dict[hit][color], axis=0)
+                    print("mean_colors " + str(type(mean_colors)))
+                    csvwriter.writerow([gene + ' ' + color] + mean_colors.tolist())
+                    print("std_colors " + str(type(std_colors)))
+                    csvwriter.writerow([gene + ' ' + color + ' std'] + std_colors.tolist()) 
+                csvwriter.writerow([' '])
 
 
-        # with open(save_location, 'w', newline='') as csvfile:
-        #     csvwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     csvwriter.writerow(['GeneName'] + ExportListForCSV(times))
-        #     for gene in gene_colors_dict:
-        #         for color in gene_colors_dict[gene]:
-        #             mean_colors = np.mean(gene_colors_dict[gene][color], axis=0)
-        #             std_colors = np.std(gene_colors_dict[gene][color], axis=0)
-        #             row = [gene + ' ' + color] + ExportListForCSV(mean_colors)
-        #             csvwriter.writerow(row)
-        #             new_row = [gene + ' ' + color + ' std'] + ExportListForCSV(std_colors)
-        #             csvwriter.writerow(new_row)
-
-
-####################################
     def plot_hits():
         if len(hit_dict) != 0:
             abx = plt.figure()
@@ -427,8 +387,6 @@ def open_analyze():
                 plt.plot(times[idxes], mean_colors[idxes], label=hit)
             abx.legend()
             abx.show()
-        return
-
     
 
 
@@ -464,7 +422,7 @@ def open_analyze():
                 wellID = a + b
 
                 if operation.get() == "select":
-                    gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+                    gene_series = temp_functions.read_from_xml(graph_source.get())
                     toggle_hit(gene_series[wellID]["gene"], wellID)
                     
                 elif operation.get() == "view":
@@ -472,7 +430,7 @@ def open_analyze():
                     abx = plt.figure()
                     abx.add_subplot(111)
 
-                    gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+                    gene_series = temp_functions.read_from_xml(graph_source.get())
 
                     times = gene_series["A01"]['times']
                     min_time = min(times)
@@ -510,7 +468,7 @@ def open_analyze():
     canvas.draw()
 
     def update_subgraph_hit(gene_and_source):
-        gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+        gene_series = temp_functions.read_from_xml(graph_source.get())
         for wellID in gene_series: 
             gene_and_source_cur = gene_series[wellID]["gene"] + " (" + graph_file_name.get() + ")"
             if gene_and_source == gene_and_source_cur:
@@ -543,7 +501,7 @@ def open_analyze():
             graph_color.set(lbox_colors.get(lbox_colors.curselection()[0]))
             print(graph_source.get())
 
-            gene_series = temp_functions.import_gene_color_change_dict(graph_source.get())
+            gene_series = temp_functions.read_from_xml(graph_source.get())
             times = gene_series["A01"]['times']
             if not min_max_default.get():
                 min_time = float(entry_min.get())
@@ -626,6 +584,7 @@ master.geometry("300x150")
 tk.Label(master, text = "Select which function you want to perform").pack()
 tk.Button(master, text = "Generate Barcodes", command = open_generate).pack()
 tk.Button(master, text = "Organize by Barcodes", command = open_organize).pack()
+tk.Button(master, text = "Collect Data From Images", command = open_collect).pack()
 tk.Button(master, text = "Analyze Plates", command = open_analyze).pack()
 
 master.mainloop()

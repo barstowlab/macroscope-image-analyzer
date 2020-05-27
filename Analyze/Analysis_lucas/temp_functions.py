@@ -2,7 +2,7 @@ def num_from_well_ID(wellID):
     return (ord(wellID[0])-65) * 12 + int(wellID[1:3])
  
 
-def import_gene_color_change_dict(color_info_file):
+def read_from_xml(color_info_file):
     import xml.etree.ElementTree as ET
     import numpy as np
     print(color_info_file)
@@ -23,18 +23,6 @@ def import_gene_color_change_dict(color_info_file):
         times = np.array(well.attrib['times'].split(','),float)
         times = times - times[0]
         ordered_indices = np.argsort(times)
-        # if gene in gene_series:
-        #     for color in color_keys:
-        #         color_series = np.array(well.attrib[color].split(','), float)
-        #         gene_series[gene][color] = np.vstack((gene_series[gene][color],
-        #                                              np.reshape(color_series[ordered_indices], (1, len(times)))))
-        # else:
-        #     gene_series[gene] = {}
-        #     gene_series[gene]["times"] = times
-        #     for color in color_keys:
-        #         color_series = np.array(well.attrib[color].split(','), float)
-        #         gene_series[gene][color] = np.reshape(color_series[ordered_indices], (1, len(times)))
-        
         gene_series[wellID] = {}
         gene_series[wellID]["gene"] = gene
         gene_series[wellID]["times"] = times
@@ -46,20 +34,4 @@ def import_gene_color_change_dict(color_info_file):
 
     return gene_series
 
-def get_input(file_name, inputParameters):
-    import re
-    import pdb
 
-    file = open(file_name,'r')
-    inputData = file.readlines()
-
-    # Go through all lines and search for input parameters
-
-    inputParameterValues = {}
-
-    for item in inputParameters:
-        result = inputParameterSearch(inputData, item)
-        if result != None:
-            inputParameterValues[item] = result
-
-    return inputParameterValues
