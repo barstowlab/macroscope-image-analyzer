@@ -190,10 +190,10 @@ def locate_wells(plate, img_types, folder_location, new_pixel_width, output_file
 # gets all pixels within given radius and given location
 def get_pixels(pixels, x, y, radius):
     import numpy as np
-
     red_pixels = []
     green_pixels = []
     blue_pixels = []
+    # print("i", y - radius, y + radius + 1)
     for i in range(y - radius, y + radius + 1):
         delta_x = max(0, int(np.sqrt(radius ** 2 - (y - i) ** 2)) - 1)
         for j in range(x - delta_x, x + delta_x + 1):
@@ -230,9 +230,10 @@ def get_well_colors(plate, img_types, folder_location, fittedWellPositionDict, r
             # gets all pixels in well within a certain radius
             x = int(fittedWellPositionDict[well][0])
             y = int(fittedWellPositionDict[well][1])
-            red_pixels, green_pixels, blue_pixels = get_pixels(pixels, x, y, radius)
+            red_pixels, green_pixels, blue_pixels = get_pixels(pixels, x, y, -radius)
 
             # finds the mean and median pixel values for these colors
+            # print(red_pixels)
             r_mean = np.mean(red_pixels)
             r_median = np.median(red_pixels)
             g_mean = np.mean(green_pixels)
