@@ -2,8 +2,10 @@ import numpy as np
 from tkinter import filedialog
 import tkinter as tk
 import analysis_functions
-import threading
 import csv
+import helper_functions
+from tkinter import ttk
+from os import path
 
 tk.TK_SILENCE_DEPRECATION=1
 
@@ -119,7 +121,7 @@ def open_generate():
 
 
     # Save Location, destination directory
-    tk.Label(generate, text = dest_directory.get()).pack()
+    tk.Label(generate, textvariable = dest_directory).pack()
     def select_dest_folder():
         dest_directory.set(filedialog.askdirectory())
 
@@ -199,15 +201,47 @@ def open_collect():
 
     collect = tk.Tk()
     collect.title("Organize by Barcodes")
-    collect.geometry("500x300")
+    collect.geometry("600x300")
 
-    plate_folder
-    well_info_csv
-    image_type = ".jpg"
+    folder_location = tk.StringVar(collect, value="UNSELECTED")
+    assay_plate_info = tk.StringVar(collect, value="UNSELECTED")
+    save_location = tk.StringVar(collect, value="UNSELECTED")
 
-    save_location
-    folder_location
+    tk.Label(collect, textvariable=folder_location).pack()
+    def select_folder_location():
+        folder_location.set(filedialog.askdirectory())
+    tk.Button(collect, text="Folder Location", command=select_folder_location).pack()
+ 
+    tk.Label(collect, textvariable=assay_plate_info).pack()
+    def select_assay_plate_info():
+        assay_plate_info.set(filedialog.askopenfilename())
+    tk.Button(collect, text="Assay Plate Info (csv)", command=select_assay_plate_info).pack()
 
+    tk.Label(collect, textvariable=save_location).pack()
+    def set_save():
+        save_location.set(filedialog.askdirectory())
+    tk.Button(collect, text="Select Save Location", command=set_save).pack()
+
+
+    def collect_data():
+        assay_name = path.basename(path.dirname(assay_plate_info.get()))
+        plate_names = [assay_name]
+
+        well_info = {}
+        well_info[assay_name] = helper_functions.parse_well_info(assay_plate_info.get())
+
+        img_types = {}
+        img_types[assay_name] = ".jpg"
+
+        # Hardcoded Variables
+        new_pixel_width = 800
+        scaledMarkFilePostfix = r"_scaled_marked.png"
+        wellColorsPostfix = r"_colors.xml"
+
+        helper_functions.find_wells(plate_names, img_types, folder_location.get(), well_info, new_pixel_width,\
+             save_location.get(), scaledMarkFilePostfix, wellColorsPostfix)
+
+    tk.Button(collect, text="Begin Data Collection", command=collect_data).pack()
 
     collect.mainloop()
 
@@ -222,7 +256,7 @@ def open_analyze():
     from matplotlib.backend_bases import key_press_handler
     from matplotlib.figure import Figure
     import matplotlib.pyplot as plt
-    import temp_functions
+    import helper_functions
     import os
     import csv
     matplotlib.use("TkAgg")
@@ -325,7 +359,7 @@ def open_analyze():
     def toggle_hit(gene, wellID):
         gene_and_source = gene + " (" + graph_file_name.get() + ")"
         if gene_and_source not in hit_list:
-            gene_series = temp_functions.read_from_xml(graph_source.get())
+            gene_series = helper_functions.read_from_xml(graph_source.get())
             hit_dict[gene_and_source] = gene_series[wellID]
             hit_list.append(gene_and_source)
             update_hit_list()
@@ -422,7 +456,7 @@ def open_analyze():
                 wellID = a + b
 
                 if operation.get() == "select":
-                    gene_series = temp_functions.read_from_xml(graph_source.get())
+                    gene_series = helper_functions.read_from_xml(graph_source.get())
                     toggle_hit(gene_series[wellID]["gene"], wellID)
                     
                 elif operation.get() == "view":
@@ -430,7 +464,7 @@ def open_analyze():
                     abx = plt.figure()
                     abx.add_subplot(111)
 
-                    gene_series = temp_functions.read_from_xml(graph_source.get())
+                    gene_series = helper_functions.read_from_xml(graph_source.get())
 
                     times = gene_series["A01"]['times']
                     min_time = min(times)
@@ -468,7 +502,7 @@ def open_analyze():
     canvas.draw()
 
     def update_subgraph_hit(gene_and_source):
-        gene_series = temp_functions.read_from_xml(graph_source.get())
+        gene_series = helper_functions.read_from_xml(graph_source.get())
         for wellID in gene_series: 
             gene_and_source_cur = gene_series[wellID]["gene"] + " (" + graph_file_name.get() + ")"
             if gene_and_source == gene_and_source_cur:
@@ -501,7 +535,7 @@ def open_analyze():
             graph_color.set(lbox_colors.get(lbox_colors.curselection()[0]))
             print(graph_source.get())
 
-            gene_series = temp_functions.read_from_xml(graph_source.get())
+            gene_series = helper_functions.read_from_xml(graph_source.get())
             times = gene_series["A01"]['times']
             if not min_max_default.get():
                 min_time = float(entry_min.get())
