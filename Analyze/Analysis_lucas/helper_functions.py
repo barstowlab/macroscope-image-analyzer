@@ -37,27 +37,6 @@ def read_from_xml(color_info_file):
 
 #####################
 
-# helper functions for FindWellPositionsImproved
-
-
-# takes a csv file name containing information about the wells as an input
-def parse_well_info(plate_info_file):
-
-    import csv
-
-    wells_info = {}
-    with open(plate_info_file, newline='') as csvfile:
-        well_reader = csv.reader(csvfile, delimiter=',')
-        headers = next(well_reader)
-        for well in well_reader:
-            well_info = {}
-            for i in range(1, len(headers)):
-                well_info[headers[i].replace(" ", "")] = well[i]
-            wells_info[well[0]] = well_info
-    return wells_info
-
-
-# generates xml file for each plate
 def find_wells(plate_names, img_types, workingDir, well_info, new_pixel_width, save_location, scaled_img_postfix,
                well_coords_postfix):
     fittedWellPositionDict = {}
@@ -74,7 +53,6 @@ def find_wells(plate_names, img_types, workingDir, well_info, new_pixel_width, s
                                             well_info, well_radius, well_colors_dict[plate])
         WriteWellPositionsDictForImageAsCSV(well_coords_file_name, plate, well_info[plate], well_colors_dict[plate])
     return
-
 
 # creates GUI for finding well locations
 def locate_wells(plate, img_types, workingDir, new_pixel_width, output_file_name):
@@ -225,23 +203,6 @@ def locate_wells(plate, img_types, workingDir, new_pixel_width, output_file_name
 
     return well_locs, radius / scaling
 
-
-# gets all pixels within given radius and given location
-def get_pixels(pixels, x, y, radius):
-    import numpy as np
-    red_pixels = []
-    green_pixels = []
-    blue_pixels = []
-    # print("i", y - radius, y + radius + 1)
-    for i in range(y - radius, y + radius + 1):
-        delta_x = max(0, int(np.sqrt(radius ** 2 - (y - i) ** 2)) - 1)
-        for j in range(x - delta_x, x + delta_x + 1):
-            red_pixels.append(pixels[j, i][0])
-            green_pixels.append(pixels[j, i][1])
-            blue_pixels.append(pixels[j, i][2])
-    return red_pixels, green_pixels, blue_pixels
-
-
 # get colors from well
 def get_well_colors(plate, img_types, workingDir, fittedWellPositionDict, radius):
     from PIL import Image
@@ -295,13 +256,66 @@ def get_well_colors(plate, img_types, workingDir, fittedWellPositionDict, radius
 
     return well_colors_dict
 
+# generates list of files from the given "directory" that meet the given regular expression "regex"
+def GenerateFileList(directory=".", regex=".*\.ProcSpec.dat", ignoreCase=True):
+    import os
+    import re
+    fileList = os.listdir(directory)
+
+    if ignoreCase == True:
+        filePattern = re.compile(regex, re.IGNORECASE)
+    else:
+        filePattern = re.compile(regex)
+
+    i = 0
+    selectFiles = []
+
+    while i < len(fileList):
+        if filePattern.match(fileList[i]) != None:
+            selectFiles.append(fileList[i])
+        i = i + 1
+
+    return selectFiles
+
 
 # translates row and column numbers to well id
 def get_well_id(r, c):
     return chr(ord('A') + r - 1) + str(c).zfill(2)
 
 
-# writes out well information in xml form
+# gets all pixels within given radius and given location
+def get_pixels(pixels, x, y, radius):
+    import numpy as np
+    red_pixels = []
+    green_pixels = []
+    blue_pixels = []
+    # print("i", y - radius, y + radius + 1)
+    for i in range(y - radius, y + radius + 1):
+        delta_x = max(0, int(np.sqrt(radius ** 2 - (y - i) ** 2)) - 1)
+        for j in range(x - delta_x, x + delta_x + 1):
+            red_pixels.append(pixels[j, i][0])
+            green_pixels.append(pixels[j, i][1])
+            blue_pixels.append(pixels[j, i][2])
+    return red_pixels, green_pixels, blue_pixels
+
+# gets absolute time image was taken (it's in the fileName)
+def ProcessTimeStamp(fileName):
+    import re
+    import os
+
+    baseName = os.path.basename(fileName)
+
+    timeStampRegex = re.compile("(\w*)\-(\d+)")
+    timeStampSearch = timeStampRegex.search(baseName)
+
+    if timeStampSearch != None:
+        timeStamp = timeStampSearch.group(2)
+    else:
+        ex = 0
+        raise 0
+
+    return timeStamp
+
 def WriteWellPositionsDictForImageAsXML(fileName, plate, fittedWellPositionsDict, originatingFolder, well_info, well_radius,
                                         well_colors_dict):
 
@@ -328,6 +342,35 @@ def WriteWellPositionsDictForImageAsXML(fileName, plate, fittedWellPositionsDict
 
     return
 
+# translates array for xml (also from Buz)
+def ExportListForXML(listToExport, delimeter=','):
+
+    outputStr = ''
+
+    i = 0
+    while i < len(listToExport):
+        outputStr += str(listToExport[i])
+        if i < len(listToExport) - 1:
+            outputStr += delimeter
+        i += 1
+
+    return outputStr
+
+# method for indenting some text when writing to xml (from Buz's old code)
+def indent(elem, level=0):
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            indent(elem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
 
 # writes out well information in csv form
 def WriteWellPositionsDictForImageAsCSV(fileName, plate, well_info, well_colors_dict):
@@ -365,24 +408,6 @@ def WriteWellPositionsDictForImageAsCSV(fileName, plate, well_info, well_colors_
                 new_row = [gene + ' ' + color + ' std'] + ExportListForCSV(std_colors)
                 csvwriter.writerow(new_row)
 
-
-# method for indenting some text when writing to xml (from Buz's old code)
-def indent(elem, level=0):
-    i = "\n" + level*"  "
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-        for elem in elem:
-            indent(elem, level+1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        if level and (not elem.tail or not elem.tail.strip()):
-            elem.tail = i
-
-
 # translates array for csv
 def ExportListForCSV(original_list):
     new_arr = []
@@ -390,160 +415,18 @@ def ExportListForCSV(original_list):
         new_arr.append(str(val))
     return new_arr
 
+# takes a csv file name containing information about the wells as an input
+def parse_well_info(plate_info_file):
 
-# translates array for xml (also from Buz)
-def ExportListForXML(listToExport, delimeter=','):
+    import csv
 
-    outputStr = ''
-
-    i = 0
-    while i < len(listToExport):
-        outputStr += str(listToExport[i])
-        if i < len(listToExport) - 1:
-            outputStr += delimeter
-        i += 1
-
-    return outputStr
-
-
-# gets absolute time image was taken (it's in the fileName)
-def ProcessTimeStamp(fileName):
-    import re
-    import os
-
-    baseName = os.path.basename(fileName)
-
-    timeStampRegex = re.compile("(\w*)\-(\d+)")
-    timeStampSearch = timeStampRegex.search(baseName)
-
-    if timeStampSearch != None:
-        timeStamp = timeStampSearch.group(2)
-    else:
-        ex = 0
-        raise 0
-
-    return timeStamp
-# -----------------------
-
-
-# generates list of files from the given "directory" that meet the given regular expression "regex"
-def GenerateFileList(directory=".", regex=".*\.ProcSpec.dat", ignoreCase=True):
-    import os
-    import re
-    fileList = os.listdir(directory)
-
-    if ignoreCase == True:
-        filePattern = re.compile(regex, re.IGNORECASE)
-    else:
-        filePattern = re.compile(regex)
-
-    i = 0
-    selectFiles = []
-
-    while i < len(fileList):
-        if filePattern.match(fileList[i]) != None:
-            selectFiles.append(fileList[i])
-        i = i + 1
-
-    return selectFiles
-
-
-# reads xml file created in FindWellPositionsImproved.py
-def import_gene_color_change_dict(color_info_file):
-    import xml.etree.ElementTree as ET
-    import numpy as np
-
-    tree = ET.parse(color_info_file)
-    root = tree.getroot()
-    gene_series = {}
-
-    wells = root.findall('well')
-    color_keys = ['mean_green', 'mean_red', 'mean_blue', 'median_green', 'median_red', 'median_blue', 'median_yellow',
-                  'mean_yellow']
-
-    for well in wells:
-        gene = well.attrib['GeneName']
-        times = np.array(well.attrib['times'].split(','),float)
-        times = times - times[0]
-        ordered_indices = np.argsort(times)
-        if gene in gene_series:
-            for color in color_keys:
-                color_series = np.array(well.attrib[color].split(','), float)
-                gene_series[gene][color] = np.vstack((gene_series[gene][color],
-                                                     np.reshape(color_series[ordered_indices], (1, len(times)))))
-        else:
-            gene_series[gene] = {}
-            gene_series[gene]["times"] = times
-            for color in color_keys:
-                color_series = np.array(well.attrib[color].split(','), float)
-                gene_series[gene][color] = np.reshape(color_series[ordered_indices], (1, len(times)))
-
-    return gene_series
-
-
-# reorients image to have the width be the longest dimension and maximizes similarities in red to old image
-# to make sure they are all facing the same direction
-def orient_images(plate_names, img_types, folder_location, new_folder_location):
-    from PIL import Image, ImageTk
-    import os
-
-    for plate in plate_names:
-        # gets all images
-        workingDir = folder_location + plate
-        fileList = GenerateFileList(directory=workingDir, regex=".*" + img_types[plate])
-        fileList = sorted(fileList)
-
-        # makes sure image has a larger width than height
-        image = Image.open(workingDir + '/' + fileList[0])
-        width, height = image.size
-        if height > width:
-            image = image.rotate(90)
-        new_width = 200
-        new_height = int(new_width / width * height)
-        image_small = image.resize((new_width, new_height))
-
-        # creates directory if neccessary
-        if not os.path.exists(new_folder_location + plate):
-            os.makedirs(new_folder_location + plate)
-
-        image.save(new_folder_location + plate + '/' + fileList[0])
-
-        # uses the first image as a baseline to compare to all the other images
-        for file in fileList[1:]:
-            new_image = Image.open(workingDir + '/' + file)
-            width, height = new_image.size
-            if height > width:
-                im1 = new_image.rotate(90)
-                temp = width
-                width = height
-                height = temp
-            else:
-                im1 = new_image
-            im2 = im1.rotate(180)
-            im1_small = im1.resize((new_width,new_height))
-            im2_small = im2.resize((new_width, new_height))
-
-            cor1 = calc_red_cor(image_small, im1_small, new_width, new_height)
-            cor2 = calc_red_cor(image_small, im2_small, new_width, new_height)
-            if cor1 > cor2:
-                im1.save(new_folder_location + plate + '/' + file)
-            else:
-                im2.save(new_folder_location + plate + '/' + file)
-
-
-# calculates cross correlation of im1 and im2 in the red color channel
-def calc_red_cor(im1, im2, width, height):
-    import math
-    pix1 = im1.load()
-    pix2 = im2.load()
-    pix1_norm = 0
-    pix2_norm = 0
-    red_cor = 0
-    for i in range(width):
-        for j in range(height):
-            red_cor += pix1[i,j][0] * pix2[i,j][0]
-            pix1_norm += pix1[i,j][0]**2
-            pix2_norm += pix2[i,j][0]**2
-    pix1_norm = math.sqrt(pix1_norm / (width * height))
-    pix2_norm = math.sqrt(pix2_norm / (width * height))
-    return red_cor / (width * height) / pix1_norm / pix2_norm
+    wells_info = {}
+    with open(plate_info_file, newline='') as csvfile:
+        well_reader = csv.reader(csvfile, delimiter=',')
+        headers = next(well_reader)
+        for well in well_reader:
+            well_info = {}
+            for i in range(1, len(headers)):
+                well_info[headers[i].replace(" ", "")] = well[i]
+            wells_info[well[0]] = well_info
+    return wells_info

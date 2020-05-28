@@ -206,24 +206,29 @@ def open_collect():
     folder_location = tk.StringVar(collect, value="UNSELECTED")
     assay_plate_info = tk.StringVar(collect, value="UNSELECTED")
     save_location = tk.StringVar(collect, value="UNSELECTED")
+    process_status = tk.StringVar(collect, value="")
 
     tk.Label(collect, textvariable=folder_location).pack()
     def select_folder_location():
+        process_status.set("")
         folder_location.set(filedialog.askdirectory())
     tk.Button(collect, text="Folder Location", command=select_folder_location).pack()
  
     tk.Label(collect, textvariable=assay_plate_info).pack()
     def select_assay_plate_info():
+        process_status.set("")
         assay_plate_info.set(filedialog.askopenfilename())
     tk.Button(collect, text="Assay Plate Info (csv)", command=select_assay_plate_info).pack()
 
     tk.Label(collect, textvariable=save_location).pack()
     def set_save():
+        process_status.set("")
         save_location.set(filedialog.askdirectory())
     tk.Button(collect, text="Select Save Location", command=set_save).pack()
 
 
     def collect_data():
+        process_status.set("Processing...")
         assay_name = path.basename(path.dirname(assay_plate_info.get()))
         plate_names = [assay_name]
 
@@ -240,8 +245,11 @@ def open_collect():
 
         helper_functions.find_wells(plate_names, img_types, folder_location.get(), well_info, new_pixel_width,\
              save_location.get(), scaledMarkFilePostfix, wellColorsPostfix)
+        process_status.set("Finished!")
 
     tk.Button(collect, text="Begin Data Collection", command=collect_data).pack()
+
+    tk.Label(collect, textvariable=process_status, font=("Helvetica", 20)).pack()
 
     collect.mainloop()
 
