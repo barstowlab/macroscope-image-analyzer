@@ -7,6 +7,7 @@ def parse_well_info(plate_info_file):
     import csv
 
     wells_info = {}
+    print(plate_info_file)
     with open(plate_info_file, newline='') as csvfile:
         well_reader = csv.reader(csvfile, delimiter=',')
         headers = next(well_reader)
@@ -231,7 +232,7 @@ def get_well_colors(plate, img_types, folder_location, fittedWellPositionDict, r
             # gets all pixels in well within a certain radius
             x = int(fittedWellPositionDict[well][0])
             y = int(fittedWellPositionDict[well][1])
-            red_pixels, green_pixels, blue_pixels = get_pixels(pixels, x, y, -radius)
+            red_pixels, green_pixels, blue_pixels = get_pixels(pixels, x, y, radius)
 
             # finds the mean and median pixel values for these colors
             # print(red_pixels)

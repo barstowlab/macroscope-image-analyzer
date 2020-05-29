@@ -229,7 +229,7 @@ def get_well_colors(plate, img_types, workingDir, fittedWellPositionDict, radius
             # gets all pixels in well within a certain radius
             x = int(fittedWellPositionDict[well][0])
             y = int(fittedWellPositionDict[well][1])
-            red_pixels, green_pixels, blue_pixels = get_pixels(pixels, x, y, -radius)
+            red_pixels, green_pixels, blue_pixels = get_pixels(pixels, x, y, radius)
 
             # finds the mean and median pixel values for these colors
             # print(red_pixels)
