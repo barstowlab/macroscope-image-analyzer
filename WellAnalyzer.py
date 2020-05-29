@@ -145,7 +145,7 @@ def open_organize():
     organize = tk.Tk()
     organize.title("Organize by Barcodes")
     organize.geometry("500x300")
-    UNSET_DESTINATION = "Select Destination"
+    UNSET_DESTINATION = "Select Directory"
 
     plate_type = tk.StringVar(organize)
     source_directory = tk.StringVar(organize)
