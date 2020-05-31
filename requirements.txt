@@ -1,0 +1,6 @@
+###### Requirements without Version Specifiers ######`
+pyzbar
+Pillow
+numpy
+matplotlib
+opencv-python

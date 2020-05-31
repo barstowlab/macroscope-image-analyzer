@@ -1,7 +1,6 @@
 import numpy as np
 from tkinter import filedialog
 import tkinter as tk
-import analysis_functions
 import csv
 import helper_functions
 from tkinter import ttk
@@ -60,7 +59,7 @@ def open_generate():
 
         output_file_and_directory = dest_directory.get() + "/" + output_file.get()
 
-        analysis_functions.generate_barcode(plate_type.get(), output_file_and_directory, \
+        helper_functions.generate_barcode(plate_type.get(), output_file_and_directory, \
             barcode_prefix.get(), barcode_postfix.get(), max_rows.get(), max_columns.get(), \
                 padding_columns.get(), padding_rows.get(), barcode_number_start.get(), \
                     barcode_number_end.get()+1)
@@ -98,7 +97,7 @@ def open_generate():
     tk.Entry(generate, textvariable = max_columns).pack()
 
     # Padding Columns
-    tk.Label(generate, text = "Padding Colums?").pack()
+    tk.Label(generate, text = "Padding Columns?").pack()
     padding_columns.set(True)
     tk.Radiobutton(generate, text = "True", variable = padding_columns, value = True).pack()
     tk.Radiobutton(generate, text = "False", variable = padding_columns, value = False).pack()
@@ -160,7 +159,7 @@ def open_organize():
         if dest_directory.get() ==  "" or dest_directory.get() == UNSET_DESTINATION:
             create_notification("ERROR: Must designate a destination directory")
             return
-        analysis_functions.organize_by_barcode(plate_type.get(), source_directory.get(),\
+        helper_functions.organize_by_barcode(plate_type.get(), source_directory.get(),\
             dest_directory.get())
         return
 
@@ -260,7 +259,7 @@ def open_collect():
 def open_analyze():
     from tkinter import ttk, HORIZONTAL
     import matplotlib
-    from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+    from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg)#, NavigationToolbar2Tk)
     from matplotlib.backend_bases import key_press_handler
     from matplotlib.figure import Figure
     import matplotlib.pyplot as plt
