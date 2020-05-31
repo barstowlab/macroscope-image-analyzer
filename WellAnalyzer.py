@@ -619,7 +619,7 @@ def open_analyze():
 
 # Set up Main Selection Screen
 master = tk.Tk()
-master.title("Jurgensen Well Analyzer Demo")
+master.title("Well Analyzer")
 master.geometry("300x150")
 
 tk.Label(master, text = "Select which function you want to perform").pack()
