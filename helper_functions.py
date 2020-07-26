@@ -414,6 +414,7 @@ def locate_wells(plate, img_types, workingDir, new_pixel_width, output_file_name
                 save_spot = output_file_name[:len(output_file_name) - 4] + file[:len(file)-4] + output_file_name[len(output_file_name)-4:]
                 savefig(save_spot)
                 close()
+        root.quit()
         root.destroy()
 
     # defines known locations on the plate
